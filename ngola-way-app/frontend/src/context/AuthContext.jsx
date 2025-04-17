@@ -14,49 +14,11 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserRole = async (userId) => {
     try {
-      // First try to fetch existing profile
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", userId)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') { // Record not found
-          // Create new profile if doesn't exist
-          const { data: userData } = await supabase.auth.getUser()
-          const { error: insertError } = await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: userId,
-                role: "client",
-                email: userData.user.email
-              }
-            ])
-          
-          if (insertError) throw insertError
-          return "client"
-        }
-        throw error
-      }
-
-      return data.role
+      const { data: { user } } = await supabase.auth.getUser()
+      return user?.user_metadata?.role || "client"
     } catch (error) {
       console.error("Error in fetchUserRole:", error.message)
-      // Retry once if there's an error
-      try {
-        const { data: retryData } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", userId)
-          .single()
-        
-        return retryData?.role || "client"
-      } catch (retryError) {
-        console.error("Error in retry fetchUserRole:", retryError.message)
-        return "client"
-      }
+      return "client"
     }
   }
 
@@ -95,24 +57,25 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = async (data) => {
     try {
-      const authResponse = await supabase.auth.signUp(data)
-      if (authResponse.error) throw authResponse.error
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+      })
+      
+      if (authError) throw authError
 
-      if (authResponse.data.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert([
-            {
-              id: authResponse.data.user.id,
-              role: "client",
-              email: data.email
-            }
-          ])
+      // Create profile after successful signup
+      if (authData?.user?.id) {
+        const { error: profileError } = await supabase.auth.updateUser({
+          data: { role: data.role || "client" }
+        })
 
-        if (profileError) throw profileError
+        if (profileError) {
+          console.error("Error updating user metadata:", profileError.message)
+        }
       }
 
-      return authResponse
+      return { data: authData, error: null }
     } catch (error) {
       console.error("Error in signUp:", error.message)
       throw error
