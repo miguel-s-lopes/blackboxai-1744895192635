@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import { Disclosure, Menu, Transition } from '@headlessui/react'
 import { useAuth } from '../../context/AuthContext'
 
-const navigation = [
+const publicNavigation = [
   { name: 'Home', href: '/', current: true },
+]
+
+const privateNavigation = [
   { name: 'Book Ride', href: '/book-ride', current: false },
   { name: 'Find Stay', href: '/find-stay', current: false },
 ]
@@ -42,7 +45,21 @@ export default function Header() {
                   </Link>
                 </div>
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  {navigation.map((item) => (
+                  {publicNavigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={classNames(
+                        item.current
+                          ? 'border-primary text-gray-900'
+                          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                        'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium'
+                      )}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  {user && privateNavigation.map((item) => (
                     <Link
                       key={item.name}
                       to={item.href}
