@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './context/AuthContext'
 import Layout from './components/common/Layout'
+import ProtectedRoute from './components/common/ProtectedRoute'
+import PublicRoute from './components/common/PublicRoute'
 
 // Lazy load pages
 import { lazy, Suspense } from 'react'
@@ -22,27 +23,35 @@ const Loading = () => (
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            {/* Public routes */}
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          {/* Public routes */}
+          <Route element={<PublicRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
+          </Route>
 
-            {/* Protected routes */}
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/book-ride" element={<BookRide />} />
-              <Route path="/find-stay" element={<FindStay />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
+          </Route>
 
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
+          {/* Client-only routes */}
+          <Route element={<ProtectedRoute requiredRole="client" />}>
+            <Route element={<Layout />}>
+              <Route path="/book-ride" element={<BookRide />} />
+              <Route path="/find-stay" element={<FindStay />} />
+            </Route>
+          </Route>
+
+          {/* Catch all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </Router>
   )
 }
