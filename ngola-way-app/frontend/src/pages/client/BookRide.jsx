@@ -18,28 +18,50 @@ export default function BookRide() {
 
   // Fetch nearby drivers
   useEffect(() => {
+    let isMounted = true;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000; // 2 seconds
+
     const fetchNearbyDrivers = async () => {
-      if (!userLocation) return
+      if (!userLocation) return;
+      
+      setLoading(true);
+      setError(null);
 
       try {
         const { data, error } = await supabase
           .from('drivers')
           .select('*')
-          .eq('status', 'available')
-          // In a real app, we would use PostGIS to query by distance
-          // For now, we'll just fetch all available drivers
+          .eq('status', 'available');
         
-        if (error) throw error
+        if (error) throw error;
 
-        setDrivers(data || [])
+        if (isMounted) {
+          setDrivers(data || []);
+          setLoading(false);
+        }
       } catch (error) {
-        console.error('Error fetching drivers:', error)
-        setError('Failed to fetch nearby drivers')
+        console.error('Error fetching drivers:', error);
+        
+        if (isMounted) {
+          if (retryCount < MAX_RETRIES) {
+            retryCount++;
+            setTimeout(fetchNearbyDrivers, RETRY_DELAY);
+          } else {
+            setError('Failed to fetch nearby drivers. Please try again.');
+            setLoading(false);
+          }
+        }
       }
-    }
+    };
 
-    fetchNearbyDrivers()
-  }, [userLocation])
+    fetchNearbyDrivers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userLocation]);
 
   // Calculate markers for the map
   const markers = [
