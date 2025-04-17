@@ -14,41 +14,84 @@ export const MapProvider = ({ children }) => {
   const [map, setMap] = useState(null)
   const [userLocation, setUserLocation] = useState(null)
 
-  // Initialize map
+  const defaultLocation = [-0.127758, 51.507351]; // Default to London
+
+  // Initialize map with default location
   const initializeMap = (container) => {
+    if (map) return map; // Return existing map if already initialized
+
     const mapInstance = new mapboxgl.Map({
       container,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: userLocation || [-0.127758, 51.507351], // Default to London
+      center: defaultLocation,
       zoom: 12
-    })
+    });
 
-    mapInstance.addControl(new mapboxgl.NavigationControl())
+    mapInstance.addControl(new mapboxgl.NavigationControl());
     mapInstance.addControl(new mapboxgl.GeolocateControl({
       positionOptions: {
         enableHighAccuracy: true
       },
       trackUserLocation: true
-    }))
+    }));
 
-    setMap(mapInstance)
-    return mapInstance
-  }
+    setMap(mapInstance);
+    return mapInstance;
+  };
 
   // Get user's location
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { longitude, latitude } = position.coords
-          setUserLocation([longitude, latitude])
-        },
-        (error) => {
-          console.error('Error getting location:', error)
+    let isMounted = true;
+
+    const getUserLocation = () => {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (isMounted) {
+              const { longitude, latitude } = position.coords;
+              setUserLocation([longitude, latitude]);
+            }
+          },
+          (error) => {
+            console.error('Error getting location:', error);
+            if (isMounted) {
+              setUserLocation(defaultLocation);
+            }
+          }
+        );
+      } else {
+        if (isMounted) {
+          setUserLocation(defaultLocation);
         }
-      )
+      }
+    };
+
+    getUserLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Update map center when user location changes
+  useEffect(() => {
+    if (map && userLocation) {
+      map.flyTo({
+        center: userLocation,
+        zoom: 12,
+        essential: true
+      });
     }
-  }, [])
+  }, [map, userLocation]);
+
+  // Cleanup map instance on unmount
+  useEffect(() => {
+    return () => {
+      if (map) {
+        map.remove();
+      }
+    };
+  }, [map]);
 
   // Add a marker to the map
   const addMarker = (coordinates, options = {}) => {
