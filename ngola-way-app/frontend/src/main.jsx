@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { MapProvider } from './context/MapContext'
+import { AuthProvider } from './context/AuthContext'
 import './index.css'
 
 // Add Google Fonts
@@ -18,8 +19,10 @@ document.head.appendChild(fontAwesome)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <MapProvider>
-      <App />
-    </MapProvider>
+    <AuthProvider>
+      <MapProvider>
+        <App />
+      </MapProvider>
+    </AuthProvider>
   </React.StrictMode>
 )
